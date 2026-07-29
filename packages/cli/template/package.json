@@ -1,0 +1,17 @@
+{
+  "name": "kb-curio-project",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A kb-curio knowledge base, scaffolded by @kb-curio/cli.",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/rss": "^4.0.19",
+    "@kb-curio/core": "^0.1.0",
+    "astro": "^5.1.1"
+  }
+}

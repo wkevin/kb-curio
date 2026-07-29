@@ -1,0 +1,60 @@
+---
+import PostMeta from '../components/PostMeta.astro';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  pubDate?: Date;
+  date?: Date;
+  updatedDate?: Date;
+  author?: string | number;
+  media?: string;
+  translator?: string;
+  source?: string;
+  topics?: string[];
+  tags?: string[];
+}
+
+const {
+  title,
+  description,
+  pubDate,
+  date,
+  updatedDate,
+  author,
+  media,
+  translator,
+  source,
+  topics: _topics,
+  tags,
+} = Astro.props;
+
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const articleDate = pubDate || date;
+---
+<BaseLayout title={title || '文章'} description={description}>
+  <article>
+    <PostMeta
+      pubDate={articleDate}
+      source={source}
+      author={media ? `${author} @ ${media}` : author}
+      translator={translator}
+      updatedDate={updatedDate}
+      tags={tags}
+      base={base}
+    />
+    <slot />
+  </article>
+</BaseLayout>
+
+<style>
+  article h1 {
+    margin-bottom: 1rem;
+  }
+  hr {
+    margin: 1.5rem 0;
+    border: none;
+    border-top: 1px solid var(--border);
+  }
+</style>

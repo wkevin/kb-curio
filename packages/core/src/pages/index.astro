@@ -1,0 +1,107 @@
+---
+import { type CollectionEntry, getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadKbCurioConfig } from '../load-config.ts';
+
+const cfg = await loadKbCurioConfig();
+
+type Article = CollectionEntry<'article'>;
+
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+const articleHref = (a: Article) =>
+  `${base}article/${a.id.replace(/^\d{6}\//, '').replace(/\.mdx?$/, '')}`;
+
+const latestArticles = (await getCollection('article'))
+  .filter((a: Article) => !a.data.draft)
+  .sort((a: Article, b: Article) => +new Date(b.data.pubDate ?? 0) - +new Date(a.data.pubDate ?? 0))
+  .slice(0, 10);
+
+const dateLabel = (a: Article): string =>
+  a.data.pubDate ? a.data.pubDate.toISOString().slice(0, 10) : '';
+---
+<BaseLayout>
+  <section class="hero">
+    <h1>{cfg.site.title}</h1>
+    {cfg.site.description && <p>{cfg.site.description}</p>}
+  </section>
+
+  <section class="latest">
+    <h2>最新文章</h2>
+    {latestArticles.length === 0 ? (
+      <p class="empty">还没有内容。在 <code>{cfg.dataDir}/article/</code> 下添加文章后，首页会自动展示。</p>
+    ) : (
+      <ul class="article-list">
+        {latestArticles.map((a: Article) => (
+          <li class="article-item">
+            <a href={articleHref(a)} class="article-item__title">{a.data.title ?? a.id}</a>
+            {dateLabel(a) && <time class="article-item__date">{dateLabel(a)}</time>}
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    text-align: center;
+    padding: 3rem 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+  .hero h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .hero p {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .latest {
+    margin-bottom: 2.5rem;
+  }
+  .latest h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+  }
+
+  .article-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .article-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .article-item:last-child {
+    border-bottom: none;
+  }
+  .article-item__title {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+  }
+  .article-item__title:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .article-item__date {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .empty {
+    color: var(--text-secondary);
+  }
+</style>

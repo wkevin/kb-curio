@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "noEmit": false,
+    "rewriteRelativeImportExtensions": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules", ".astro"]
+}

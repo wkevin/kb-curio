@@ -1,0 +1,12 @@
+# build artifacts
+*.mp4
+*.tar
+dist/
+.astro/
+
+# deps (each package keeps its own node_modules in gitignore)
+node_modules/
+
+# per-package overrides (e.g. packages/site/.gitignore covers .astro, dist)
+refer/
+.turbo/

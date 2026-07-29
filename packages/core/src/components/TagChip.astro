@@ -1,0 +1,45 @@
+---
+/**
+ * TagChip — a single tag pill that links to the tag-listing page.
+ *
+ * Usage:
+ *   <TagChip tag="AI" base="/" />                    // → /tags/AI/
+ *   <TagChip tag="AI" base="/" variant="outline" />  // outline style
+ */
+export interface Props {
+  tag: string;
+  base?: string;
+  variant?: 'solid' | 'outline';
+  count?: number;
+}
+const { tag, base = '/', variant = 'solid', count } = Astro.props;
+const href = `${base}tags/${encodeURIComponent(tag)}`;
+---
+<a href={href} class:list={['tag-chip', `tag-chip--${variant}`]}>
+  <span class="tag-chip__name">#{tag}</span>
+  {count !== undefined && <span class="tag-chip__count">({count})</span>}
+</a>
+
+<style>
+  .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .tag-chip--solid {
+    background: var(--accent);
+    color: white;
+  }
+  .tag-chip--outline {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .tag-chip:hover { opacity: 0.85; }
+  .tag-chip__count { opacity: 0.7; font-size: 0.8em; }
+</style>

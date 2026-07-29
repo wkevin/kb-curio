@@ -1,0 +1,85 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/.astro",
+      "!**/.turbo",
+      "!**/node_modules",
+      "!**/*.tsbuildinfo",
+      "!**/coverage",
+      "!**/refer",
+      "!**/packages/core/public",
+      "!**/*.html",
+      "!**/*.svg"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedImports": "off",
+            "noUnusedVariables": "off"
+          },
+          "style": {
+            "useImportType": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.css", "**/*.astro"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          },
+          "suspicious": {
+            "noDuplicateProperties": "off",
+            "noDuplicateCustomProperties": "off"
+          },
+          "style": {
+            "noDescendingSpecificity": "off"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "kb-curio",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "kb-curio — a knowledge-base framework + scaffolder monorepo",
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:demo": "pnpm --filter kb-curio-demo dev",
+    "build": "turbo run build",
+    "build:core": "pnpm --filter @kb-curio/core build",
+    "build:cli": "pnpm --filter @kb-curio/cli build",
+    "clean": "pnpm -r exec rm -rf dist .astro node_modules/.cache",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "sync:demo": "tsx scripts/sync-demo-from-template.ts",
+    "sync:demo:dry": "tsx scripts/sync-demo-from-template.ts --dry-run",
+    "check:skills": "tsx scripts/check-skills-lock.ts",
+    "update:skills-lock": "tsx scripts/update-skills-lock.ts",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "turbo run build --filter=@kb-curio/core --filter=@kb-curio/cli && changeset publish"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
+    "@changesets/cli": "^2.31.0",
+    "gray-matter": "^4.0.3",
+    "turbo": "^2.9.18",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.0"
+  }
+}

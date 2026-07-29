@@ -1,0 +1,456 @@
+---
+import { loadKbCurioConfig } from '../load-config.ts';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+// Load project config for site title/description defaults.
+const cfg = await loadKbCurioConfig();
+
+const {
+  title = cfg.site.title,
+  description = cfg.site.description ?? `${cfg.site.title} — a kb-curio knowledge base.`,
+} = Astro.props;
+
+// 获取 base 路径前缀
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+
+const pathname = Astro.url.pathname.replace(/\/$/, '');
+const isHome = pathname === base.replace(/\/$/, '') || pathname === '';
+const isArticleIndex = pathname === `${base}article`;
+const activeTopic = isArticleIndex ? Astro.url.searchParams.get('topic') : null;
+
+// GitHub repo URL — read from project config, or hide the icon when absent.
+const githubUrl = cfg.site.github;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <script is:inline>
+      // 主题初始化脚本 - 必须内联以避免闪烁
+      ;(function () {
+        const theme =
+          localStorage.getItem('theme') ||
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        document.documentElement.setAttribute('data-theme', theme)
+      })()
+    </script>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href={base} class={isHome ? 'nav-link nav-link--active' : 'nav-link'}>首页</a>
+        {cfg.topics.map((topic) => (
+          <a
+            href={`${base}article/?topic=${encodeURIComponent(topic.id)}`}
+            class={activeTopic === topic.id ? 'nav-link nav-link--active' : 'nav-link'}
+            title={topic.description}
+          >{topic.name}</a>
+        ))}
+        <a href={`${base}rss.xml`} class="rss-link">
+          <svg
+            class="rss-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 11a9 9 0 0 1 9 9"></path>
+            <path d="M4 4a16 16 0 0 1 16 16"></path>
+            <circle cx="5" cy="19" r="1"></circle>
+          </svg>
+        </a>
+        {githubUrl && (
+          <a href={githubUrl} class="github-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg
+              class="github-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+          </a>
+        )}
+        <button id="theme-toggle" class="theme-toggle" aria-label="切换主题">
+          <svg
+            class="sun-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg
+            class="moon-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer>
+      <p>&copy; 2026 kb-curio</p>
+    </footer>
+  </body>
+</html>
+
+<script>
+  // 主题切换脚本
+  const themeToggle = document.getElementById('theme-toggle')
+  const html = document.documentElement
+
+  // 更新图标显示
+  function updateIcon(theme: string) {
+    const sunIcon = themeToggle?.querySelector('.sun-icon') as HTMLElement
+    const moonIcon = themeToggle?.querySelector('.moon-icon') as HTMLElement
+    if (sunIcon && moonIcon) {
+      if (theme === 'dark') {
+        sunIcon.style.display = 'none'
+        moonIcon.style.display = 'block'
+      } else {
+        sunIcon.style.display = 'block'
+        moonIcon.style.display = 'none'
+      }
+    }
+  }
+
+  // 初始化图标状态
+  updateIcon(html.getAttribute('data-theme') || 'light')
+
+  // 主题切换处理
+  themeToggle?.addEventListener('click', () => {
+    const currentTheme = html.getAttribute('data-theme') || 'light'
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
+
+    html.setAttribute('data-theme', newTheme)
+    localStorage.setItem('theme', newTheme)
+    updateIcon(newTheme)
+  })
+
+  // 监听系统主题变化
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!localStorage.getItem('theme')) {
+      const newTheme = e.matches ? 'dark' : 'light'
+      html.setAttribute('data-theme', newTheme)
+      updateIcon(newTheme)
+    }
+  })
+</script>
+
+<style is:global>
+  /* Light 主题 */
+  :root,
+  [data-theme='light'] {
+    --accent: #2563eb;
+    --accent-dark: #1e40af;
+    --black: #0a0a0a;
+    --gray: #6b7280;
+    --gray-light: #e5e7eb;
+    --gray-dark: #374151;
+    --gray-gradient: linear-gradient(180deg, #f9fafb, #fff);
+    --box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.1);
+
+    --bg: #ffffff;
+    --bg-secondary: #f9fafb;
+    --bg-tertiary: #f3f4f6;
+    --text: #111827;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --code-bg: #f3f4f6;
+    --pre-bg: #1f2937;
+    --pre-text: #f9fafb;
+  }
+
+  /* Dark 主题 */
+  [data-theme='dark'] {
+    --accent: #60a5fa;
+    --accent-dark: #3b82f6;
+    --black: #f9fafb;
+    --gray: #9ca3af;
+    --gray-light: #374151;
+    --gray-dark: #d1d5db;
+    --gray-gradient: linear-gradient(180deg, #1f2937, #111827);
+    --box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.5);
+
+    --bg: #111827;
+    --bg-secondary: #1f2937;
+    --bg-tertiary: #374151;
+    --text: #f9fafb;
+    --text-secondary: #9ca3af;
+    --border: #374151;
+    --code-bg: #1f2937;
+    --pre-bg: #0f172a;
+    --pre-text: #e5e7eb;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-family: system-ui, sans-serif;
+    background: var(--bg-secondary);
+    background-size: 224px;
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  main {
+    flex: 1;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  header {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 0;
+  }
+
+  header nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  header nav a {
+    color: var(--gray-dark);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  /* RSS icon: first item on the right edge. */
+  header nav .rss-link {
+    margin-left: auto;
+  }
+
+  /* GitHub icon: same right-aligned cluster, immediately after RSS. */
+  header nav .github-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem;
+    border-radius: 0.375rem;
+    color: var(--gray-dark);
+  }
+  header nav .github-link:hover {
+    color: var(--accent);
+    background: var(--bg-tertiary);
+  }
+
+  /* Active nav link: change background to indicate current route. */
+  header nav .nav-link {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.15s;
+  }
+  header nav .nav-link:hover {
+    background: var(--bg-secondary);
+  }
+  header nav .nav-link--active {
+    background: var(--accent);
+    color: white;
+  }
+  header nav .nav-link--active:hover {
+    background: var(--accent);
+  }
+
+  header nav a .rss-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+  }
+
+  header nav a:hover {
+    color: var(--accent);
+  }
+
+  header nav a:hover .rss-icon {
+    opacity: 1;
+  }
+
+  /* 主题切换按钮 */
+  .theme-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    padding: 0.375rem;
+    cursor: pointer;
+    color: var(--gray-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .theme-toggle:hover {
+    background: var(--bg-tertiary);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .theme-toggle .sun-icon,
+  .theme-toggle .moon-icon {
+    display: none;
+  }
+
+  footer {
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 0;
+    text-align: center;
+    color: var(--gray);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 1.5rem 0 0.75rem;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  h1 {
+    font-size: 2.25rem;
+  }
+  h2 {
+    font-size: 1.875rem;
+  }
+  h3 {
+    font-size: 1.5rem;
+  }
+
+  p {
+    margin-bottom: 1rem;
+    line-height: 1.75;
+    color: var(--text);
+  }
+  ul,
+  ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+  }
+  li {
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+
+  code {
+    background: var(--code-bg);
+    color: var(--text);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.9em;
+  }
+
+  pre {
+    background: var(--pre-bg);
+    color: var(--pre-text);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+
+  blockquote {
+    border-left: 4px solid var(--accent);
+    padding-left: 1rem;
+    margin-left: 0;
+    color: var(--text-secondary);
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* 高亮标注样式 - 用于文章重点内容 */
+  .highlight {
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+
+  [data-theme='light'] .highlight {
+    background-color: #fff3cd;
+  }
+
+  [data-theme='dark'] .highlight {
+    background-color: #4b5563;
+  }
+</style>

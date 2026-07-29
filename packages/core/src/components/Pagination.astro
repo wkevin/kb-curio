@@ -1,0 +1,94 @@
+---
+/**
+ * Pagination — prev / page-numbers / next controls.
+ *
+ * Usage:
+ *   <Pagination
+ *     currentPage={page.currentPage}
+ *     totalPages={page.lastPage}
+ *     base="/items/"
+ *   />
+ *
+ * Generates URLs like: /items/1/, /items/2/, etc. (Astro native paginate style).
+ */
+export interface Props {
+  currentPage: number;
+  totalPages: number;
+  base: string;
+  /** Visible window around current page (default 2). */
+  window?: number;
+}
+const { currentPage, totalPages, base, window = 2 } = Astro.props;
+
+function pageUrl(p: number): string {
+  return `${base.replace(/\/$/, '')}/${p}/`;
+}
+
+function pageNumbers(): (number | 'ellipsis')[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const out: (number | 'ellipsis')[] = [1];
+  const start = Math.max(2, currentPage - window);
+  const end = Math.min(totalPages - 1, currentPage + window);
+  if (start > 2) out.push('ellipsis');
+  for (let i = start; i <= end; i++) out.push(i);
+  if (end < totalPages - 1) out.push('ellipsis');
+  out.push(totalPages);
+  return out;
+}
+---
+{totalPages > 1 && (
+  <nav class="pagination" aria-label="Pagination">
+    {currentPage > 1 && (
+      <a href={pageUrl(currentPage - 1)} class="pagination__link">← 上一页</a>
+    )}
+    {pageNumbers().map(p =>
+      p === 'ellipsis' ? (
+        <span class="pagination__ellipsis">…</span>
+      ) : p === currentPage ? (
+        <span class="pagination__current" aria-current="page">{p}</span>
+      ) : (
+        <a href={pageUrl(p)} class="pagination__link">{p}</a>
+      )
+    )}
+    {currentPage < totalPages && (
+      <a href={pageUrl(currentPage + 1)} class="pagination__link">下一页 →</a>
+    )}
+  </nav>
+)}
+
+<style>
+  .pagination {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+  }
+  .pagination__link,
+  .pagination__current,
+  .pagination__ellipsis {
+    display: inline-block;
+    padding: 0.4rem 0.75rem;
+    border-radius: 4px;
+    min-width: 2.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+  }
+  .pagination__link {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .pagination__link:hover { border-color: var(--accent); }
+  .pagination__current {
+    background: var(--accent);
+    color: white;
+  }
+  .pagination__ellipsis {
+    color: var(--text-secondary);
+  }
+</style>

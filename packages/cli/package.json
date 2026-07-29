@@ -1,0 +1,58 @@
+{
+  "name": "@kb-curio/cli",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "kb-curio scaffolder — `kb-curio init <dir>` to bootstrap a new knowledge base from the @kb-curio/core framework.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wkevin/kb-curio.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/wkevin/kb-curio/issues"
+  },
+  "homepage": "https://github.com/wkevin/kb-curio#readme",
+  "keywords": [
+    "kb-curio",
+    "scaffold",
+    "knowledge-base",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "bin": {
+    "kb-curio": "./dist/cli.js"
+  },
+  "main": "./dist/cli.js",
+  "files": [
+    "dist",
+    "template",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/cli.js",
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sync:template-skills": "node scripts/sync-template-skills.mjs",
+    "prepack": "pnpm run sync:template-skills && pnpm run build"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.10.1",
+    "commander": "^12.1.0",
+    "execa": "^9.5.2",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

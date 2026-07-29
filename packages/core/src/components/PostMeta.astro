@@ -1,0 +1,92 @@
+---
+/**
+ * PostMeta — the metadata header block for an article/blog/presentation.
+ *
+ * Extracted from BlogPost.astro for reuse. Renders date, source, author,
+ * translator, updated date, and tag chips.
+ *
+ * Usage:
+ *   <PostMeta
+ *     pubDate={post.data.pubDate}
+ *     source={post.data.source}
+ *     author={post.data.author}
+ *     translator={post.data.translator}
+ *     updatedDate={post.data.updatedDate}
+ *     tags={post.data.tags}
+ *     base="/"
+ *   />
+ */
+export interface Props {
+  pubDate?: Date | string;
+  source?: string;
+  author?: string | number;
+  translator?: string;
+  updatedDate?: Date | string;
+  tags?: string[];
+  base?: string;
+}
+const { pubDate, source, author, translator, updatedDate, tags = [], base = '/' } = Astro.props;
+
+function fmtDate(d: Date | string | undefined): string {
+  if (!d) return '';
+  const date = typeof d === 'string' ? new Date(d) : d;
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+const pubStr = fmtDate(pubDate);
+const updStr = fmtDate(updatedDate);
+---
+{/* The wrapping element is intentionally a fragment; consumers place it where they want. */}
+{(pubStr || source || author || updStr || tags.length > 0) && (
+  <div class="post-meta">
+    {pubStr && (
+      <p class="post-meta__row">
+        <time datetime={typeof pubDate === 'string' ? pubDate : pubDate?.toISOString()}>{pubStr}</time>
+      </p>
+    )}
+    {source && <p class="post-meta__row"><span class="post-meta__label">信源：</span>{source}</p>}
+    {author && <p class="post-meta__row"><span class="post-meta__label">作者：</span>{author}</p>}
+    {translator && <p class="post-meta__row"><span class="post-meta__label">翻译：</span>{translator}</p>}
+    {updStr && <p class="post-meta__row"><span class="post-meta__label">更新：</span>{updStr}</p>}
+    {tags.length > 0 && (
+      <p class="post-meta__tags">
+        {tags.map(t => (
+          <a href={`${base}tags/${encodeURIComponent(t)}`} class="post-meta__tag">#{t}</a>
+        ))}
+      </p>
+    )}
+  </div>
+)}
+
+<style>
+  .post-meta {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .post-meta__row {
+    margin: 0.15rem 0;
+  }
+  .post-meta__label {
+    color: var(--text);
+    font-weight: 500;
+    margin-right: 0.25rem;
+  }
+  .post-meta__tags {
+    margin: 0.5rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .post-meta__tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.8rem;
+  }
+  .post-meta__tag:hover { border-color: var(--accent); }
+</style>

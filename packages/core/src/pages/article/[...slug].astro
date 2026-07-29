@@ -1,0 +1,25 @@
+---
+import { type CollectionEntry, getCollection, render } from 'astro:content';
+import Article from '../../layouts/Article.astro';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const articles = (await getCollection('article')).filter(
+    (a: CollectionEntry<'article'>) => !a.data.draft,
+  );
+  return articles.map((a: CollectionEntry<'article'>) => ({
+    // URL: /article/<id-without-YYYYMM-folder>
+    // e.g. data/article/202601/20260129_xxx/index.md → /article/20260129_xxx/
+    params: { slug: a.id.replace(/^\d{6}\//, '').replace(/\.mdx?$/, '') },
+    props: { article: a },
+  }));
+}
+
+const { article } = Astro.props as { article: CollectionEntry<'article'> };
+const { Content } = await render(article);
+---
+
+<Article {...article.data} topics={article.data.topics} tags={article.data.tags} id={article.id}>
+  <Content />
+</Article>

@@ -1,0 +1,426 @@
+---
+import { type CollectionEntry, getCollection } from 'astro:content';
+import path from 'node:path';
+import Article from '../../layouts/Article.astro';
+import { loadKbCurioConfigWithRoot, loadTaxonomySet } from '../../load-config.ts';
+
+const { cfg, root } = await loadKbCurioConfigWithRoot();
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
+
+// Page is statically prerendered: render every non-draft article. The
+// `<script>` block at the bottom of this file applies ?topic=, ?tag=,
+// ?source= filters on the client so deep links still work without an
+// SSR adapter. (Previously this page was server-rendered; that required
+// every consumer to install a server adapter just to build, which
+// conflicts with kb-curio's "static knowledge base" positioning.)
+const allUndrafted = (await getCollection('article'))
+  .filter((a: CollectionEntry<'article'>) => !a.data.draft)
+  .sort(
+    (a: CollectionEntry<'article'>, b: CollectionEntry<'article'>) =>
+      +new Date(b.data.pubDate ?? 0) - +new Date(a.data.pubDate ?? 0),
+  );
+
+// Facet counts reflect the full undrafted set; the sidebar's linkFor()
+// still emits URLs with ?topic= / ?tag= / ?source= so navigating via
+// sidebar preserves each filter as a deep link.
+const tagCounts = new Map<string, number>();
+for (const a of allUndrafted) {
+  for (const t of a.data.tags ?? []) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+}
+const orderedTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
+
+const sourceCounts = new Map<string, number>();
+for (const a of allUndrafted) {
+  if (a.data.source) sourceCounts.set(a.data.source, (sourceCounts.get(a.data.source) ?? 0) + 1);
+}
+
+// Source list always reflects the configured sources taxonomy (so 0-count
+// entries are visible) plus any unconfigured source that an article carries.
+const sourcesTaxonomyPath = cfg.taxonomy.sources ? path.join(root, cfg.taxonomy.sources) : null;
+const taxonomySources = sourcesTaxonomyPath
+  ? loadTaxonomySet(sourcesTaxonomyPath)
+  : new Set<string>();
+const observedSources = new Set<string>([...taxonomySources, ...sourceCounts.keys()]);
+const orderedSources = [...observedSources].sort((a, b) => {
+  const diff = (sourceCounts.get(b) ?? 0) - (sourceCounts.get(a) ?? 0);
+  return diff !== 0 ? diff : a.localeCompare(b);
+});
+
+// Pre-compute display data, plus per-article topic/tag/source metadata
+// emitted as data-* attributes for the client-side filter below.
+const listItems: Array<{
+  href: string;
+  title: string;
+  date: string;
+  topics: string;
+  source: string;
+  tags: string;
+}> = allUndrafted.map((a: CollectionEntry<'article'>) => ({
+  href: `${base}article/${a.id.replace(/^\d{6}\//, '').replace(/\.mdx?$/, '')}`,
+  title: a.data.title ?? a.id,
+  date: a.data.pubDate ? a.data.pubDate.toISOString().slice(0, 10) : '',
+  topics: (a.data.topics ?? []).join(','),
+  source: a.data.source ?? '',
+  tags: (a.data.tags ?? []).join(','),
+}));
+
+// Sidebar URLs always start from a blank filter set; clicking "话题 X"
+// produces /article/?topic=X without preserving prior ?tag=. This matches
+// the merged "全部 / facet" heading style.
+const linkFor = (overrides: Record<string, string | null>): string => {
+  const params = new URLSearchParams();
+  const next = { topic: null, tag: null, source: null, ...overrides };
+  for (const [k, v] of Object.entries(next)) {
+    if (v) params.set(k, v);
+  }
+  const qs = params.toString();
+  return `${base}article/${qs ? `?${qs}` : ''}`;
+};
+
+const pageTitle = '文章';
+---
+
+<Article title={pageTitle} description="所有抓取和研究记录的文章">
+
+  <div class="article-layout">
+    <aside class="sidebar">
+      <section class="facet-group">
+        <h2>
+          <a
+            href={linkFor({ source: null })}
+            class="facet-heading"
+            data-facet-heading="source"
+          >信源</a>
+        </h2>
+        {orderedSources.length === 0 ? (
+          <p class="facet-empty">暂无信源。</p>
+        ) : (
+          <ul class="facet-list">
+            {orderedSources.map((s) => (
+              <li>
+                <a
+                  href={linkFor({ source: s })}
+                  class="facet"
+                  data-facet="source"
+                  data-facet-value={s}
+                >{s} <span class="facet-count">{sourceCounts.get(s) ?? 0}</span></a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section class="facet-group">
+        <h2>
+          <a
+            href={linkFor({ tag: null })}
+            class="facet-heading"
+            data-facet-heading="tag"
+          >关键词</a>
+        </h2>
+        {orderedTags.length === 0 ? (
+          <p class="facet-empty">暂无关键词。</p>
+        ) : (
+          <ul class="facet-list">
+            {orderedTags.map(([t, n]) => (
+              <li>
+                <a
+                  href={linkFor({ tag: t })}
+                  class="facet"
+                  data-facet="tag"
+                  data-facet-value={t}
+                >#{t} <span class="facet-count">{n}</span></a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </aside>
+
+    <main class="article-main">
+      <p class="empty" data-empty hidden>没有匹配项。</p>
+      <ul class="article-list" data-article-list>
+        {listItems.map((item) => (
+          <li
+            class="article-item"
+            data-topics={item.topics}
+            data-source={item.source}
+            data-tags={item.tags}
+          >
+            <a href={item.href} class="article-item__title">{item.title}</a>
+            {item.date && <time class="article-item__date">{item.date}</time>}
+          </li>
+        ))}
+      </ul>
+    </main>
+  </div>
+
+  <script is:inline>
+    // Apply ?topic=, ?tag=, ?source= filters on the client. The page is
+    // statically prerendered with every article in the DOM; this script
+    // hides non-matching rows and toggles the active class on the
+    // matching sidebar facets. Re-runs on popstate so back/forward and
+    // sidebar clicks both stay in sync.
+    //
+    // NOTE: this is `<script is:inline>` (plain JS, not a module).
+    // Astro's dev server passes the source through verbatim without TS
+    // stripping, so any TypeScript syntax (interfaces, type aliases,
+    // generics, `as` casts, etc.) here breaks the entire script with a
+    // SyntaxError and `applyFilters` is never defined. Keep this block
+    // plain JS.
+    function readFilters() {
+      const params = new URLSearchParams(location.search);
+      return {
+        topic: params.get('topic'),
+        tag: params.get('tag'),
+        source: params.get('source'),
+      };
+    }
+
+    function applyFilters() {
+      const filters = readFilters();
+      const list = document.querySelector('[data-article-list]');
+      if (!list) return;
+      const items = list.querySelectorAll('.article-item');
+      let visible = 0;
+      items.forEach((li) => {
+        const topics = (li.dataset.topics ?? '').split(',').filter(Boolean);
+        const tags = (li.dataset.tags ?? '').split(',').filter(Boolean);
+        const source = li.dataset.source ?? '';
+        const ok =
+          (!filters.topic || topics.includes(filters.topic)) &&
+          (!filters.tag || tags.includes(filters.tag)) &&
+          (!filters.source || source === filters.source);
+        li.hidden = !ok;
+        if (ok) visible += 1;
+      });
+
+      // Sidebar heading + facet "active" highlighting.
+      const headings = {
+        tag: document.querySelector('[data-facet-heading="tag"]'),
+        source: document.querySelector('[data-facet-heading="source"]'),
+      };
+      ['tag', 'source'].forEach((key) => {
+        const el = headings[key];
+        if (!el) return;
+        el.classList.toggle('facet-heading--active', !filters[key]);
+      });
+      document.querySelectorAll('[data-facet]').forEach((a) => {
+        const key = a.dataset.facet;
+        if (!key) return;
+        a.classList.toggle('facet--active', a.dataset.facetValue === filters[key]);
+      });
+
+      // Recompute sidebar counts to reflect only the remaining visible
+      // items. Without this, clicking "topic: ai-reforge" leaves the
+      // sidebar showing the *full* article count for each tag/source,
+      // which contradicts the filtered list on the right.
+      //
+      // Hide 0-count tags (their taxonomy is article-driven, so an empty
+      // tag list means "no articles use this tag"). Keep 0-count sources
+      // visible — sources are a configured taxonomy and the empty list is
+      // useful information ("nothing in this source yet").
+      const FACET_DATASETS = { topic: 'topics', tag: 'tags', source: 'source' };
+      Object.keys(FACET_DATASETS).forEach((facetKey) => {
+        const datasetKey = FACET_DATASETS[facetKey];
+        const counts = {};
+        items.forEach((li) => {
+          if (li.hidden) return;
+          const raw = li.dataset[datasetKey] || '';
+          const values = facetKey === 'source'
+            ? (raw ? [raw] : [])
+            : raw.split(',').filter(Boolean);
+          values.forEach((v) => { counts[v] = (counts[v] || 0) + 1; });
+        });
+        document.querySelectorAll(`[data-facet="${facetKey}"]`).forEach((a) => {
+          const value = a.dataset.facetValue;
+          const count = counts[value] ?? 0;
+          const span = a.querySelector('.facet-count');
+          if (span) span.textContent = count;
+          // For tags, hide rows whose count dropped to 0. Sources stay
+          // visible regardless of count (see header comment).
+          if (facetKey === 'tag' && count === 0) {
+            const li = a.closest('li');
+            if (li) li.hidden = true;
+          }
+        });
+      });
+
+      // Empty-state placeholder when everything is hidden.
+      const empty = document.querySelector('[data-empty]');
+      if (empty) empty.hidden = visible !== 0;
+
+      // Browser tab title mirrors the active filter.
+      document.title = filters.topic
+        ? `主题：${filters.topic}`
+        : filters.tag
+          ? `标签：#${filters.tag}`
+          : filters.source
+            ? `信源：${filters.source}`
+            : '文章';
+    }
+
+    window.addEventListener('DOMContentLoaded', applyFilters);
+    window.addEventListener('popstate', applyFilters);
+    // Sidebar clicks are <a href="?..."> so the browser handles navigation,
+    // but we want to update the visible state without a full reload when
+    // the user clicks a facet anchor (history.pushState keeps the URL
+    // shareable; popstate above catches back/forward).
+    document.addEventListener('click', (ev) => {
+      const target = ev.target;
+      const a = target && target.closest ? target.closest('a[data-facet]') : null;
+      if (!a) return;
+      ev.preventDefault();
+      const url = new URL(a.href, location.href);
+      history.pushState({}, '', url);
+      applyFilters();
+    });
+  </script>
+</Article>
+
+<style>
+  .page-header {
+    margin-bottom: 1.5rem;
+  }
+  .page-header h1 {
+    margin: 0 0 0.5rem;
+  }
+  .muted {
+    color: var(--text-secondary);
+    margin: 0;
+  }
+  .clear-filter {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .article-layout {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    column-gap: 1.5rem;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .article-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 1rem;
+    min-width: 0;
+    width: 100%;
+    overflow-wrap: break-word;
+  }
+
+  .article-main {
+    min-width: 0;
+  }
+  .sidebar h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem;
+  }
+  .facet-heading {
+    color: inherit;
+    text-decoration: none;
+  }
+  .facet-heading:hover {
+    color: var(--accent);
+  }
+  .facet-heading--active {
+    color: var(--accent);
+  }
+  .facet-group + .facet-group {
+    margin-top: 1.5rem;
+  }
+  .facet-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .facet {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.375rem;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.9rem;
+    gap: 0.5rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .facet:hover {
+    background: var(--bg-secondary);
+  }
+  .facet--active {
+    background: var(--accent);
+    color: white;
+  }
+  .facet-count {
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  .post-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+  .article-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .article-item {
+    display: flex;
+    align-items: baseline;
+  }
+  /* The client-side filter sets `li.hidden = true` to drop non-matching
+     rows; without this rule, `.article-item { display: flex }` overrides
+     the HTML `hidden` attribute (which is just `display: none` by default),
+     and filtered-out rows stay visible. */
+  .article-item[hidden] {
+    display: none;
+  }
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .article-item:last-child {
+    border-bottom: none;
+  }
+  .article-item__title {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+  }
+  .article-item__title:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .article-item__date {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .empty {
+    color: var(--text-secondary);
+  }
+  .facet-empty {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 0;
+  }
+</style>

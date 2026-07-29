@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # 1. Detect open changesets and either create/update a "Version Packages"
+  #    PR, or — once that PR is merged — publish to npm.
+  release:
+    name: Changesets version + publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write   # required for npm trusted publishing (provenance)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Open or update the "Version Packages" PR. This is the standard
+      # changesets flow: PRs that touch `.changeset/*.md` accumulate here.
+      - name: Create or update Version Packages PR
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: pnpm release
+          version: pnpm version-packages
+          commit: changesets commit --message 'chore: version packages'
+          title: 'chore: version packages'
+          summary: 'Version packages and publish to npm'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Choose ONE of the two authentication modes below.
+
+          # (a) Legacy / simple: NPM_TOKEN secret (Automation token).
+          #     In repo Settings → Secrets, add an npm Automation token.
+          # NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+          # (b) npm trusted publishing (provenance, no token).
+          #     Configure Trusted Publishing on npmjs.com for each package
+          #     (linking this workflow + repo) and leave NODE_AUTH_TOKEN
+          #     unset. The `id-token: write` permission above is required.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Belt-and-suspenders: if changesets/action didn't run the publish step
+      # (e.g. the PR was merged but no publish happened), retry it here so
+      # CI does not silently leave the registry out of sync.
+      - name: Ensure packages are published
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if ! pnpm changeset status --since=origin/main | grep -q 'No packages'; then
+            echo '::error::Changesets report unconsumed changes after release.'
+            exit 1
+          fi
+          pnpm changeset publish || (echo '::error::changeset publish failed' && exit 1)
+
+      - name: Verify packages are reachable on npm
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          for pkg in @kb-curio/core @kb-curio/cli; do
+            ver=$(node -p "require('./packages/${pkg#@kb-curio/}/package.json').version")
+            echo "checking $pkg@$ver"
+            npm view "$pkg@$ver" version >/dev/null || (echo "::error::$pkg@$ver not on npm" && exit 1)
+          done

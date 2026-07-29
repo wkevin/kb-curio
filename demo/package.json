@@ -1,0 +1,18 @@
+{
+  "name": "kb-curio-demo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "kb-curio reference demo — runs @kb-curio/core against the repo's curated research corpus",
+  "scripts": {
+    "dev": "astro dev",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/rss": "^4.0.19",
+    "@kb-curio/core": "workspace:*",
+    "astro": "^5.1.1",
+    "zod": "^3.25.76"
+  }
+}
