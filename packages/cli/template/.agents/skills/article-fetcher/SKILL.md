@@ -61,6 +61,27 @@ article/
    ```
 4. 如果不存在，继续抓取流程
 
+### 0.5 环境检查（仅对微信公众号）
+
+在运行 Python 脚本前，先确认依赖：
+
+1. **检查 camoufox 二进制是否存在**（按顺序）：
+   - `$CAMOUFOX_PATH`（如果设置了环境变量）
+   - 默认路径 `/data/software/camoufox/camoufox/camoufox`
+   - 用 `ls -la <path>` 验证文件存在且可执行
+   - 缺失时给出明确指引：
+     ```
+     ⚠️ camoufox 二进制未找到
+     解决方法（任选其一）：
+       1. 设置 CAMOUFOX_PATH 指向已下载的二进制
+       2. 运行: python -m camoufox fetch
+       3. 跳过此脚本，使用 fallback 链中的 chrome-devtools MCP
+     ```
+2. **检查 proxy 是否配置**：`echo $HTTP_PROXY $HTTPS_PROXY`
+   - 微信公众号需要大陆出口 IP，缺失时给出提示
+
+只有通过这两项检查（或明确跳过）后才进入 step 1。
+
 ### 1. 抓取文章（作者、发布时间、内容）
 
 #### 需要抓取 3 类数据
@@ -69,9 +90,38 @@ article/
 2. 发布日期(pubDate)：pubDate 必须是原文的发布日期，不是执行本 skill 抓取的日期！
 3. 内容：即文章主题内容，去掉广告、侧边栏、header、footer 等无关数据。
 
-#### 抓取方式
+#### 需要附带的操作元信息（非抓取数据）
 
-微信公众号文章（ https://mp.weixin.qq.com/...）：仅使用下面方法抓取
+抓取本身只产生以上 3 类数据。除此之外, index.md frontmatter 还需要附带 1 个**操作时间戳**, 用于追踪文件的最新操作时间:
+
+- **fetchDate**(操作时间戳): 根据**当前操作时间**打上的时间戳(ISO 8601 格式, 如 `2026-08-29T04:23:27.000Z`)。
+  - 它**不是**"抓取时间", 也**不是**"原文发布时间"(那是 pubDate);
+  - 它表示 skill **执行这一刻**的时间, 后续对文章的二次编辑/更新也应该刷新这个字段。
+
+#### 抓取方式 — Fallback 链（按顺序尝试）
+
+对 https://mp.weixin.qq.com/... 文章，使用以下回退链。当且仅当当前方法返回明确失败信号时才切换到下一个，**不要并行重试同一个 URL**。
+
+| 优先级 | 方法 | 适用场景 | 触发 fallback 的信号 |
+|---|---|---|---|
+| 1 | `wechat-fetch.py` headless | 默认，camoufox 二进制存在 | 脚本退出码 ≠ 0 且 error 含 captcha / timeout / connection |
+| 2 | `wechat-fetch.py --headed` | 触发验证码 | headless 模式 captcha detected |
+| 3 | chrome-devtools MCP（headed） | camoufox 二进制缺失 / 下载失败 / 启动崩溃 | 步骤 0.5 报告 camoufox 缺失 或 脚本因二进制错误启动失败（exit code 2）|
+| 4 | agent-browser skill headed | chrome-devtools MCP 也被风控拦截 | chrome-devtools MCP 返回 captcha 页 |
+
+每一步执行前把上一步的失败原因打印到 stderr，便于诊断。
+
+**Fallback 信号判断**（来自 wechat-fetch.py JSON 输出的 `error` 字段前缀）：
+
+- `"error"` 字段含 `captcha_detected` / `环境异常` → 切到步骤 2
+- `"error"` 字段含 `camoufox binary` / `BinaryNotFound` → 跳过步骤 1、2，直接到步骤 3
+- `"error"` 字段含 `timeout` / `Connection` 且已重试 2 次 → 步骤 3
+- 步骤 1 或 2 返回 `success=true` 但 `markdown_path` 文件 < 200 字符 → 也算失败，升级到下一级
+- 步骤 0.5 报告 camoufox 缺失 → 直接跳到步骤 3
+
+**绝对不要做的**：在同一篇文章上循环执行同一个脚本超过 2 次（避免触发更严厉的风控）。
+
+执行方法（步骤 1 / 2 详细）：
 
 1.  检查 system 和 pyenv 中的 python 版本，选择 3.11+ 版本
 2.  检查 python 已经安装依赖（位于 `.claude/skills/article-fetcher/scripts/requirements.txt`），没有的话需要安装
@@ -88,8 +138,6 @@ article/
       python .claude/skills/article-fetcher/scripts/wechat-fetch.py "<url>" <temp_dir> --headed
       ```
     - 有头模式下，浏览器会打开窗口让你手动通过验证码，等待内容加载完成后自动继续
-
-4.  如果无法抓取，则直接报错，不要尝试其他方式。
 
 其他文章，**使用 MCP 或 Agent Skill 抓取**
 
@@ -123,6 +171,7 @@ article/
    - 抓取后必须验证正文是否完整，不能只抓取到摘要
    - 如果正文内容少于 200 字或明显不完整，必须换用其他工具重新抓取
    - baoyu-url-to-markdown skill、chrome-devtools mcp 或 agent-browser skill 都有可能在某些网站只抓取到摘要，遇到这种情况立即切换工具
+   - 对微信公众号：内容过短（< 200 字）应直接升级到 Fallback 链的下一步，而不是反复重试同一脚本（避免触发更严厉风控）
 
 ### 2. 保存文件
 
@@ -170,7 +219,7 @@ article/YYYYMM/YYYYMMDD_<标题>/
 ```
 topics: [
   { id: 'ai-reforge', name: 'AI 重塑开发', description: '关于 AI 改变开发者工作方式的文章' },
-  { id: 'programming-agent', name: '编程 Agent', description: '关于 Claude Code、Cursor 等 AI 编程工具' },
+  { id: 'agent-harness', name: 'Agent & Harness', description: '关于 Claude Code、Cursor、OpenClaw 等 Agent 系统与编排框架' },
   ...
 ]
 ```
@@ -183,7 +232,7 @@ topics: [
 4. 写入 frontmatter 的 `topics: [...]` 字段（值是 topic 的 `id`，不是 `name`）
 
 **例子**：
-- 文章内容是关于 Claude Code 工作流拆解 → 匹配 `programming-agent` 描述 → `topics: [programming-agent]`
+- 文章内容是关于 Claude Code 工作流拆解 → 匹配 `agent-harness` 描述 → `topics: [agent-harness]`
 - 文章内容是 AI 对行业影响 → 匹配 `ai-reforge` → `topics: [ai-reforge]`
 - 文章内容是关于 Rust 类型系统 → 匹配 `programming-language` → `topics: [programming-language]`
 
@@ -201,6 +250,7 @@ topics: [
 title: 文章标题
 url: URL
 pubDate: YYYY-MM-DD
+fetchDate: <当前操作时间戳, ISO 8601>
 author: <原作者名称（如有）>
 source: <分类>
 topics:
