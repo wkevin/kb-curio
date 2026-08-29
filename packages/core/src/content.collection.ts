@@ -50,6 +50,7 @@ export async function kbCurioArticleCollection() {
       title: z.string().optional(),
       description: z.string().optional(),
       pubDate: z.coerce.date().optional(),
+      fetchDate: z.coerce.date().optional(),
       updatedDate: z.coerce.date().optional(),
       author: z.union([z.string(), z.number()]).optional(),
       url: z.string().url().optional(),

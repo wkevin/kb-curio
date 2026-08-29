@@ -28,7 +28,7 @@ The corpus has one shape:
 
 | Layer     | Path pattern                          | Frontmatter contract                                                              |
 | --------- | ------------------------------------- | --------------------------------------------------------------------------------- |
-| `article` | `<YYYYMM>/<YYYYMMDD_slug>/index.md`   | `title`, `pubDate`, optional `source`/`url`, required `topics: [id...]`, optional `tags` |
+| `article` | `<YYYYMM>/<YYYYMMDD_slug>/index.md`   | `title`, `pubDate`, optional `fetchDate`/`source`/`url`, required `topics: [id...]`, optional `tags` |
 
 Items are flat. **Topics are frontmatter fields, not folders.** This keeps
 cross-topic items discoverable and avoids splitting a single article across

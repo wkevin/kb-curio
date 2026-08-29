@@ -6,6 +6,7 @@ interface Props {
   title?: string;
   description?: string;
   pubDate?: Date;
+  fetchDate?: Date;
   date?: Date;
   updatedDate?: Date;
   author?: string | number;
@@ -20,6 +21,7 @@ const {
   title,
   description,
   pubDate,
+  fetchDate,
   date,
   updatedDate,
   author,
@@ -33,10 +35,11 @@ const {
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 const articleDate = pubDate || date;
 ---
-<BaseLayout title={title || '文章'} description={description}>
+<BaseLayout title={title || '文章'} description={description} activeTopics={_topics}>
   <article>
     <PostMeta
       pubDate={articleDate}
+      fetchDate={fetchDate}
       source={source}
       author={media ? `${author} @ ${media}` : author}
       translator={translator}

@@ -271,11 +271,22 @@ def replace_image_urls(md: str, url_map: dict[str, str]) -> str:
 
 def build_markdown(meta: dict, body_md: str) -> str:
     """拼接最终 Markdown 文件内容，添加 YAML frontmatter"""
+    from datetime import datetime, timedelta, timezone
+
     pub_date = ""
     if meta.get("publish_time"):
         m = re.match(r"(\d{4}-\d{2}-\d{2})", meta["publish_time"])
         if m:
-            pub_date = m.group(1)
+            candidate = m.group(1)
+            # Cap to today in Asia/Shanghai. Some upstream sources
+            # (proxies, replayed fetches, timezone-confused crawlers)
+            # return a timestamp that's "now" in their clock but lands
+            # as a future date in +0800 — and RSS readers defensively
+            # drop future-dated items, silently losing the article from
+            # the feed. Catching it here keeps the article visible.
+            tz = timezone(timedelta(hours=8))
+            today = datetime.now(tz).strftime("%Y-%m-%d")
+            pub_date = min(candidate, today)
 
     author_safe = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '-', meta.get("author", "unknown"))
     author_safe = re.sub(r'-+', '-', author_safe).strip('-')[:20]
