@@ -95,14 +95,19 @@ const iso = (d: Date | undefined): string => (d ? d.toISOString().slice(0, 10) :
   .article-item:last-child {
     border-bottom: none;
   }
-  .article-item__title {
+  /* Use the more-specific .article-list .article-item__title selector
+     so the color rule wins over the `a { color: var(--accent) }` global
+     rule (and the `.article-body a` rule on detail pages). Without the
+     extra specificity, a-list-page article links render in accent blue
+     instead of the intended near-black. */
+  .article-list .article-item__title {
     color: var(--text);
     text-decoration: none;
     font-weight: 500;
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .article-item__title:hover {
+  .article-list .article-item__title:hover {
     color: var(--accent);
     text-decoration: underline;
   }

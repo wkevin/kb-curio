@@ -13,6 +13,11 @@ const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
 // triggers a full reload — re-rendering with a different comparator requires
 // re-running the SSR sort.
 const sortMode: 'fetch' | 'pub' = Astro.url.searchParams.get('sort') === 'pub' ? 'pub' : 'fetch';
+// Current filter state, read once on the server so facet links can
+// preserve the other active filters when a user clicks one of them.
+const urlTopic = Astro.url.searchParams.get('topic');
+const urlSource = Astro.url.searchParams.get('source');
+const urlTag = Astro.url.searchParams.get('tag');
 const sortKey = (a: CollectionEntry<'article'>): number =>
   +new Date(sortMode === 'pub' ? (a.data.pubDate ?? 0) : (a.data.fetchDate ?? a.data.pubDate ?? 0));
 
@@ -79,10 +84,18 @@ const listItems: Array<{
 // across filter clicks so navigating via a sidebar facet doesn't reset
 // the user's chosen sort order.
 const linkFor = (overrides: Record<string, string | null>): string => {
+  // Encodes the *delta* on top of whatever filters are currently
+  // active in the URL. The client-side click handler reads this href
+  // and merges it with the live URLSearchParams — that way clicking a
+  // single source/tag/topic link preserves the others. We can't bake
+  // current filters into the href at build time because the static page
+  // is rendered without any query string. We use an empty value
+  // (e.g. `?source=`) to mean "clear this param" so the JS knows to
+  // delete the key from the current URL.
   const params = new URLSearchParams();
-  const next = { topic: null, tag: null, source: null, ...overrides };
-  for (const [k, v] of Object.entries(next)) {
-    if (v) params.set(k, v);
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === null) params.set(k, '');
+    else if (v) params.set(k, v);
   }
   if (sortMode !== 'fetch') params.set('sort', 'pub');
   const qs = params.toString();
@@ -286,8 +299,20 @@ const pageTitle = '文章';
       const a = target && target.closest ? target.closest('a[data-facet]') : null;
       if (!a) return;
       ev.preventDefault();
+      // Merge the link's href with the current URL: start from the
+      // current params, then apply every param in the link (empty value
+      // = delete). This preserves other active filters (e.g. clicking
+      // a source while inside a topic keeps the topic) while still
+      // letting "clear X" links (e.g. the section heading) wipe X.
       const url = new URL(a.href, location.href);
-      history.pushState({}, '', url);
+      const linkParams = new URLSearchParams(url.search);
+      const merged = new URLSearchParams(location.search);
+      for (const [k, v] of linkParams) {
+        if (v === '') merged.delete(k);
+        else merged.set(k, v);
+      }
+      url.search = '?' + merged.toString();
+      history.pushState({}, '', url.toString());
       applyFilters();
     });
   </script>
@@ -375,7 +400,11 @@ const pageTitle = '文章';
   .facet:hover {
     background: var(--bg-secondary);
   }
-  .facet--active {
+  /* Bump specificity via .article-list prefix so this wins over
+     `.article-body a` (specificity 0,1,1) defined in Article.astro's
+     body style — otherwise the active facet's white text gets
+     overridden by the accent-colored anchor rule. */
+  .article-list .facet--active {
     background: var(--accent);
     color: white;
   }
@@ -396,7 +425,11 @@ const pageTitle = '文章';
   }
   .article-item {
     display: grid;
-    grid-template-columns: 7rem minmax(0, 1fr) 7rem;
+    /* auto / minmax(0, 1fr) / auto: date columns are content-sized, so
+       the title takes the rest of the row and won't wrap unless it
+       really has to. Previous fixed 7rem columns ate 224px from the
+       title, which forced 3-4 line wraps on long Chinese titles. */
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: baseline;
     gap: 0.75rem;
     padding: 0.5rem 0;
@@ -412,14 +445,20 @@ const pageTitle = '文章';
   .article-item:last-child {
     border-bottom: none;
   }
-  .article-item__title {
+  /* Use the more-specific .article-list .article-item__title selector
+     so the color rule wins over the `a { color: var(--accent) }` global
+     rule (and the `.article-body a` rule on detail pages, since the
+     list page renders inside Article.astro's body wrapper). Without the
+     extra specificity, list-page article links render in accent blue
+     instead of the intended near-black. */
+  .article-list .article-item__title {
     color: var(--text);
     text-decoration: none;
     font-weight: 500;
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .article-item__title:hover {
+  .article-list .article-item__title:hover {
     color: var(--accent);
     text-decoration: underline;
   }
