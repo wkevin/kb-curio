@@ -37,7 +37,6 @@ export interface InitOptions {
   install?: boolean;
   git?: boolean;
   local?: boolean;
-  vendor?: boolean;
   force?: boolean;
   overwrite?: boolean;
 }
@@ -84,76 +83,50 @@ export async function init(opts: InitOptions): Promise<void> {
   console.log(pc.dim(`  • rewriting package.json (name=${name})…`));
   rewritePackageJson(target, name);
 
-  // 6.5 Vendor mode: copy the framework build output into
-  // <target>/vendor/@kb-curio/core and depend on `file:./vendor/...` so
-  // the scaffolded project is decoupled from this checkout. Useful before
-  // the first npm publish (when the framework isn't on the registry yet)
-  // and as a way to validate that the published build is self-contained.
+  // 6.6 Local-mode: rewrite @kb-curio/core to either workspace:* (target
+  // inside the parent monorepo) or link:<rel-path> (target is a sibling
+  // of the monorepo). Siblings get a relative `link:` so the consumer
+  // stays usable when the host's monorepo path changes; they are NOT
+  // registered in pnpm-workspace.yaml because pnpm's `workspace:*`
+  // resolver walks upward from the consumer to find a workspace.yaml —
+  // which siblings can't, hence `ERR_PNPM_WORKSPACE_PKG_NOT_FOUND`.
   //
-  // --vendor takes priority over --local / --no-local.
-  if (opts.vendor) {
-    const monorepo = findMonorepoFromCli(resolveTemplateDir());
-    if (!monorepo) {
-      throw new Error(
-        '--vendor requires a kb-curio monorepo to be discoverable from the CLI invocation. ' +
-          'Run this command from a checkout that contains packages/core/.',
-      );
-    }
-    const vendorDir = path.join(target, 'vendor', '@kb-curio', 'core');
-    copyFrameworkFiles(monorepo.frameworkDir, vendorDir);
-    rewriteForLocalMode(target, 'file:./vendor/@kb-curio/core');
-    appendToGitignore(target, 'vendor/');
-    console.log(
-      pc.dim(
-        `  • vendored framework build into ${path.relative(process.cwd(), vendorDir) || vendorDir}`,
-      ),
-    );
-  } else {
-    // 6.6 Local-mode: rewrite @kb-curio/core to either workspace:* (target
-    // inside the parent monorepo) or link:<rel-path> (target is a sibling
-    // of the monorepo). Siblings get a relative `link:` so the consumer
-    // stays usable when the host's monorepo path changes; they are NOT
-    // registered in pnpm-workspace.yaml because pnpm's `workspace:*`
-    // resolver walks upward from the consumer to find a workspace.yaml —
-    // which siblings can't, hence `ERR_PNPM_WORKSPACE_PKG_NOT_FOUND`.
-    //
-    // `link:` is pnpm-only; `npm install` will fail with
-    // `EUNSUPPORTEDPROTOCOL: link:`. This is a deliberate dev-mode
-    // tradeoff: `link:` produces a live symlink so framework source edits
-    // propagate without re-running `pnpm install --force`, while `file:`
-    // would snapshot-copy the framework into a virtual store and require
-    // a refresh after every change. We pick the dev-friendly option.
-    // Users who need npm can scaffold with `--no-local` (published-npm
-    // mode) instead.
-    const forceLocal = opts.local === true;
-    const forcePublished = opts.local === false;
-    const cliMonorepo = !forcePublished ? findMonorepoFromCli(resolveTemplateDir()) : null;
-    const targetMonorepo = !forcePublished ? findMonorepoRoot(target) : null;
-    const monorepo = cliMonorepo ?? targetMonorepo;
-    const useLocal = forceLocal || (!forcePublished && monorepo !== null);
-    if (useLocal) {
-      if (monorepo) {
-        const rel = path.relative(monorepo.root, target);
-        const inside = rel && !rel.startsWith('..') && !path.isAbsolute(rel);
-        if (inside) {
-          rewriteForLocalMode(target, 'workspace:*');
-          maybeRegisterInWorkspace(target, monorepo);
-          console.log(
-            pc.dim(`  • using local framework (workspace link) at ${monorepo.frameworkDir}`),
-          );
-        } else {
-          const linkPath = path.relative(target, monorepo.frameworkDir).split(path.sep).join('/');
-          rewriteForLocalMode(target, `link:${linkPath}`);
-          console.log(pc.dim(`  • using local framework (link) at ${monorepo.frameworkDir}`));
-        }
-      } else {
-        rewriteForLocalMode(target);
+  // `link:` is pnpm-only; `npm install` will fail with
+  // `EUNSUPPORTEDPROTOCOL: link:`. This is a deliberate dev-mode
+  // tradeoff: `link:` produces a live symlink so framework source edits
+  // propagate without re-running `pnpm install --force`, while `file:`
+  // would snapshot-copy the framework into a virtual store and require
+  // a refresh after every change. We pick the dev-friendly option.
+  // Users who need npm can scaffold with `--no-local` (published-npm
+  // mode) instead.
+  const forceLocal = opts.local === true;
+  const forcePublished = opts.local === false;
+  const cliMonorepo = !forcePublished ? findMonorepoFromCli(resolveTemplateDir()) : null;
+  const targetMonorepo = !forcePublished ? findMonorepoRoot(target) : null;
+  const monorepo = cliMonorepo ?? targetMonorepo;
+  const useLocal = forceLocal || (!forcePublished && monorepo !== null);
+  if (useLocal) {
+    if (monorepo) {
+      const rel = path.relative(monorepo.root, target);
+      const inside = rel && !rel.startsWith('..') && !path.isAbsolute(rel);
+      if (inside) {
+        rewriteForLocalMode(target, 'workspace:*');
+        maybeRegisterInWorkspace(target, monorepo);
         console.log(
-          pc.yellow(
-            '  ! --local set but no kb-curio monorepo found in any parent directory; dependency rewritten to workspace:* anyway.',
-          ),
+          pc.dim(`  • using local framework (workspace link) at ${monorepo.frameworkDir}`),
         );
+      } else {
+        const linkPath = path.relative(target, monorepo.frameworkDir).split(path.sep).join('/');
+        rewriteForLocalMode(target, `link:${linkPath}`);
+        console.log(pc.dim(`  • using local framework (link) at ${monorepo.frameworkDir}`));
       }
+    } else {
+      rewriteForLocalMode(target);
+      console.log(
+        pc.yellow(
+          '  ! --local set but no kb-curio monorepo found in any parent directory; dependency rewritten to workspace:* anyway.',
+        ),
+      );
     }
   }
 
@@ -270,33 +243,7 @@ function rewriteForLocalMode(target: string, value = 'workspace:*'): void {
   fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
 }
 
-function copyFrameworkFiles(frameworkDir: string, vendorDir: string): void {
-  const corePkgPath = path.join(frameworkDir, 'package.json');
-  if (!fs.existsSync(corePkgPath)) {
-    throw new Error(`Framework package.json not found at ${corePkgPath}`);
-  }
-  const corePkg = JSON.parse(fs.readFileSync(corePkgPath, 'utf8')) as { files?: string[] };
-  const files = corePkg.files ?? [];
 
-  fs.mkdirSync(vendorDir, { recursive: true });
-  // npm publish bundles package.json implicitly; mirror that for the
-  // vendor copy so the snapshot is consumable by pnpm/npm.
-  fs.copyFileSync(corePkgPath, path.join(vendorDir, 'package.json'));
-  for (const f of files) {
-    const src = path.join(frameworkDir, f);
-    if (!fs.existsSync(src)) continue;
-    fs.cpSync(src, path.join(vendorDir, f), { recursive: true });
-  }
-}
-
-function appendToGitignore(target: string, line: string): void {
-  const gi = path.join(target, '.gitignore');
-  const existing = fs.existsSync(gi) ? fs.readFileSync(gi, 'utf8') : '';
-  const lines = existing.split(/\r?\n/);
-  if (lines.some((l) => l.trim() === line)) return;
-  const sep = existing.endsWith('\n') || existing === '' ? '' : '\n';
-  fs.writeFileSync(gi, `${existing}${sep}${line}\n`, 'utf8');
-}
 
 function maybeRegisterInWorkspace(target: string, monorepo: Monorepo): void {
   const wsPath = path.join(monorepo.root, 'pnpm-workspace.yaml');

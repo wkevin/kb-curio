@@ -2,7 +2,7 @@
 
 > 一个 monorepo，承载 **kb-curio 知识库框架** + **脚手架 CLI**，外加一个 demo 实例——把框架跑在 ~100 篇精选文章上。
 
-`@kb-curio/core` 和 `@kb-curio/cli` 是这个 monorepo 里发布的两个 npm 包。**首次发布前**，下游用户必须用本地 monorepo 的方式使用（见下方"本地开发"）；发布之后，外部用户可以直接 `npx @kb-curio/cli init`（见下方"npm 用户"）。
+`@kb-curio/core` 和 `@kb-curio/cli` 是这个 monorepo 里发布的两个 npm 包。**首次发布前**，下游用户可以用 GitHub URL 直接装（见下方"GitHub 源"），也可以用本地 monorepo 方式（见下方"本地开发"）；发布之后，外部用户可以直接 `npx @kb-curio/cli init`（见下方"npm 用户"）。
 
 ## 目录结构
 
@@ -38,22 +38,6 @@ pnpm --filter @kb-curio/cli build
 node packages/cli/dist/cli.js init ../my-new-kb --no-install --no-git
 ```
 
-### `--vendor`：与 framework 源码解耦的中间态
-
-发布前没有 npm registry 可装，但又想验证 "build 产物是不是真的 self-contained"——用 `--vendor`。它会把 `packages/core` 的 `files` 字段列出的所有内容（`dist/`、`src/{pages,layouts,components}`、`taxonomy/`、`skills/`、`README.md`、`LICENSE`、`package.json`）拷一份到 `<dir>/vendor/@kb-curio/core/`，并把 `@kb-curio/core` 写成 `file:./vendor/@kb-curio/core`。`.gitignore` 会自动加 `vendor/`，所以本地副本不入库。
-
-```bash
-pnpm --filter @kb-curio/core build                                    # 1. 编译 framework
-node packages/cli/dist/cli.js init ../my-new-kb --vendor --no-install --no-git  # 2. scaffold + vendor
-cd ../my-new-kb && pnpm install && pnpm dev                          # 3. 验证
-
-# 改了 framework 源码后:
-pnpm --filter @kb-curio/core build                                    # rebuild
-node packages/cli/dist/cli.js init ../my-new-kb --vendor --force --no-install --no-git  # 重新拷贝 vendor
-```
-
-`--vendor` 跟 `--local` / `--no-local` 互斥，优先级最高。后续发布到 npm 后，把 vendor 项目迁到 `^0.2.0` 依赖即可，无需改任何业务代码。
-
 ## 快速开始（npm 用户）
 
 发布之后，外部用户不需要 clone 这个仓库：
@@ -67,6 +51,41 @@ cd my-new-kb && pnpm install && pnpm dev
 npm i -g @kb-curio/cli
 kb-curio init my-new-kb
 ```
+
+## 快速开始（GitHub 源 / 预发布测试）
+
+不想等 npm 发布，也不想 clone 整个 monorepo——直接从 GitHub URL 装 framework：
+
+**A. Clone 模式（在 monorepo 旁边 scaffold，`link:` 指向 monorepo）**
+
+```bash
+git clone https://github.com/wkevin/kb-curio
+cd kb-curio
+pnpm install
+pnpm --filter @kb-curio/cli build
+
+# 在 monorepo 旁边 scaffold 一个新项目（用 link: 模式连回 monorepo）
+node packages/cli/dist/cli.js init ../my-new-kb --no-install --no-git
+cd ../my-new-kb && pnpm install && pnpm dev
+```
+
+**B. 通过 GitHub URL 直接装（framework 进 `node_modules/`，等价于 npm 用户那条路但 source 是 GitHub）**
+
+```bash
+# pnpm 直接吃 GitHub URL，会把 monorepo 拉下来
+pnpm add github:wkevin/kb-curio
+# 或 npm
+npm install github:wkevin/kb-curio
+# 指定分支 / tag / commit
+pnpm add github:wkevin/kb-curio#my-feature-branch
+pnpm add github:wkevin/kb-curio#v0.2.0
+
+# 用 CLI scaffold（此时 framework 在 node_modules，走 npm 模式）
+npx kb-curio init my-new-kb --no-install --no-git
+cd my-new-kb && pnpm install && pnpm dev
+```
+
+适用场景：首次发布前测新功能 / 测某个 PR / 用自家 fork 来 scaffold / 不 clone 整个 monorepo 只想跑个 demo。
 
 ### 脚手架参数
 
@@ -82,7 +101,6 @@ kb-curio init my-new-kb
 | `--no-git`          | 跳过 `git init` + 首次提交                                            |
 | `--local`           | 强制本地 monorepo 模式(把 `@kb-curio/core` 改成 `workspace:*` 并把这个项目注册到父级 `pnpm-workspace.yaml`) |
 | `--no-local`        | 强制已发布到 npm 的模式(保留 `@kb-curio/core` 为 `^0.2.0`)              |
-| `--vendor`          | 把 framework 的 `files` 字段列出的所有内容复制到 `<dir>/vendor/@kb-curio/core/`,并把 dep 改成 `file:./vendor/@kb-curio/core`;`.gitignore` 自动追加 `vendor/`。适用于 npm 发布前的本地解耦调试 |
 | `--force`           | 允许向非空目录写入                                                    |
 
 ## 项目配置

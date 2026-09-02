@@ -11,12 +11,16 @@
  * to point at those canonical copies — not be a stale duplicate — so
  * any change to the framework's skill is picked up automatically.
  *
- * Two install modes are supported:
- *   1. vendor mode   — `vendor/@kb-curio/core/skills` exists (current)
- *   2. published mode — `node_modules/@kb-curio/core/skills` exists (npm)
+ * Two install modes are supported (both produce the same runtime
+ * result — symlinks to canonical skill copies — so we only need to probe
+ * one path):
+ *   1. source-repo / monorepo — `node_modules/@kb-curio/core/skills`
+ *      exists when scaffolded next to the framework checkout (resolved by
+ *      pnpm/npm via the workspace:*/link: deps written by `init`).
+ *   2. published-npm — same path (`node_modules/...`) when scaffolded
+ *      against the registry with `^x.y.z` deps.
  *
- * The script probes for both and symlinks to whichever is present. The
- * postinstall hook in `package.json` runs this on every install, so
+ * The postinstall hook in `package.json` runs this on every install, so
  * switching between modes is a one-time `pnpm install` away.
  */
 import { existsSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
@@ -28,7 +32,6 @@ const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SKILL_NAMES = ['article-fetcher', 'blog-creator'];
 
 const CANDIDATES = [
-  'vendor/@kb-curio/core/skills',
   'node_modules/@kb-curio/core/skills',
 ];
 

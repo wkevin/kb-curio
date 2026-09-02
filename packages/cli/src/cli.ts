@@ -33,10 +33,6 @@ program
   .option('--local', 'Force local monorepo mode (workspace:* dependency)')
   .option('--no-local', 'Force published-npm mode (^x.y.z dependency)')
   .option(
-    '--vendor',
-    'Copy the framework build output into <dir>/vendor/@kb-curio/core and depend on file:./vendor/@kb-curio/core (decouples the target from the framework checkout — useful before first npm publish, or to validate that the published build output is self-contained)',
-  )
-  .option(
     '--overwrite',
     'Overwrite files that already exist in the target (default: skip them — preserves user data on re-init)',
   )

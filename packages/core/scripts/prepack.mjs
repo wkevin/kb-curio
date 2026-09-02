@@ -3,8 +3,8 @@ import { execSync } from 'node:child_process';
 /**
  * Prepack hook: build dist/ only if it's not already present.
  *
- * When this package is installed via `file:./packages/core` (a vendored
- * snapshot from `kb-curio init --vendor`, or a `link:` / sibling checkout),
+ * When this package is installed via `file:./packages/core` (a sibling
+ * checkout), or a `link:` dependency from the monorepo,
  * dist/ is typically already populated and the dev environment usually
  * lacks tsconfig.build.json + the source dependencies needed to rebuild
  * it. Running `tsc -p tsconfig.build.json` in that case fails with TS5058

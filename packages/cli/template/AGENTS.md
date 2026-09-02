@@ -50,7 +50,7 @@ on `astro build`/`astro dev`. Adding a new topic? Update `kb-curio.config.ts#top
 - `.agents/skills/article-fetcher/` — fetch a web article into `data/collection/`
 - `.agents/skills/blog-creator/` — create a new blog post
 
-Claude Code will discover these via `.claude/skills/` (symlink to `.agents/skills/`). The `.agents/skills/` entries are **symlinks maintained by `scripts/sync-skills.mjs`** (triggered automatically by `pnpm install` via the `postinstall` hook in `package.json`). To re-sync manually — e.g. after switching between `vendor/` and `node_modules/` install modes, or after pulling framework updates — run `node scripts/sync-skills.mjs`.
+Claude Code will discover these via `.claude/skills/` (symlink to `.agents/skills/`). The `.agents/skills/` entries are **symlinks maintained by `scripts/sync-skills.mjs`** (triggered automatically by `pnpm install` via the `postinstall` hook in `package.json`). To re-sync manually — e.g. after switching between source-repo and npm install modes, or after pulling framework updates — run `node scripts/sync-skills.mjs`.
 
 ## `scripts/kb-run.mjs`
 
