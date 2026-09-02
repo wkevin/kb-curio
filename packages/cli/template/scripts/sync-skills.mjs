@@ -24,7 +24,7 @@
  * switching between modes is a one-time `pnpm install` away.
  */
 import { existsSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -56,9 +56,11 @@ for (const name of SKILL_NAMES) {
   }
   const link = resolve(linkRoot, name);
   rmSync(link, { recursive: true, force: true });
-  // symlinkSync takes a string target. Use absolute path so the link
-  // resolves correctly even if the project is moved/copied later.
-  symlinkSync(target, link);
+  // Use a relative target so the symlink works when the project is
+  // moved or copied (e.g. cloned to another machine). symlinkSync
+  // resolves the target relative to the symlink's parent directory.
+  const relativeTarget = relative(dirname(link), target);
+  symlinkSync(relativeTarget, link);
   linked += 1;
 }
 
