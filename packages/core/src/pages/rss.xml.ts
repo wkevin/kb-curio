@@ -31,20 +31,6 @@ export async function GET(context: APIContext) {
     .filter((a: Article) => !a.data.draft)
     .sort((a: Article, b: Article) => effective(b) - effective(a));
 
-  // Some RSS readers defensively filter items whose pubDate is in the
-  // future (handles clock skew between producer and consumer). `fetchDate`
-  // is stamped at the moment article-fetcher runs — on a fast producer
-  // clock that can land milliseconds ahead of a reader's "now" and hide
-  // the item entirely. Cap the published date at `min(fetchDate, now)` so
-  // the item is always visible. Sorting above already used the uncapped
-  // fetchDate so the feed order is still "newest fetched first".
-  const now = new Date();
-  const cappedPubDate = (a: Article): Date => {
-    const fd = a.data.fetchDate;
-    if (fd && fd <= now) return fd;
-    return a.data.pubDate ?? now;
-  };
-
   return rss({
     title: `${cfg.site.title}`,
     description: cfg.site.description ?? `${cfg.site.title} — knowledge base.`,
@@ -110,7 +96,7 @@ export async function GET(context: APIContext) {
       const fallback = plain || title;
       return {
         title: itemTitle,
-        pubDate: cappedPubDate(a),
+        pubDate: a.data.fetchDate ?? a.data.pubDate ?? new Date(),
         description: a.data.description || fallback,
         link: `${base}article/${a.id.replace(/^\d{6}\//, '').replace(/\.mdx?$/, '')}`,
         content: summary || title,
