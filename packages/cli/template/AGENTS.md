@@ -22,7 +22,9 @@ articles into a static site.
 │   │   └── <YYYYMM>/<YYYYMMDD_slug>/
 │   │       ├── index.md         # article (frontmatter + body)
 │   │       └── images/          # optional
-└── .agents/skills/              # symlinks to skills shipped with @kb-curio/core
+├── .agents/skills/              # symlinks to skills shipped with @kb-curio/core (auto-managed)
+├── scripts/
+│   └── sync-skills.mjs          # postinstall: rebuild .agents/skills/ symlinks from @kb-curio/core
 ```
 
 ## Frontmatter contract for `data/article/<YYYYMM>/<slug>/index.md`
@@ -48,7 +50,7 @@ on `astro build`/`astro dev`. Adding a new topic? Update `kb-curio.config.ts#top
 - `.agents/skills/article-fetcher/` — fetch a web article into `data/collection/`
 - `.agents/skills/blog-creator/` — create a new blog post
 
-Claude Code will discover these via `.claude/skills/` (symlink to `.agents/skills/`).
+Claude Code will discover these via `.claude/skills/` (symlink to `.agents/skills/`). The `.agents/skills/` entries are **symlinks maintained by `scripts/sync-skills.mjs`** (triggered automatically by `pnpm install` via the `postinstall` hook in `package.json`). To re-sync manually — e.g. after switching between `vendor/` and `node_modules/` install modes, or after pulling framework updates — run `node scripts/sync-skills.mjs`.
 
 ## `scripts/kb-run.mjs`
 
