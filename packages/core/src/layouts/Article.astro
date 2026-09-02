@@ -307,6 +307,14 @@ const sourceLabel = source ? (sourceLabels[source] ?? source) : '';
     line-height: 1.65;
     color: var(--text);
     font-size: 1rem;
+    /* Long unbreakable strings (URLs, paste-style code spans) would
+       otherwise inflate the body's intrinsic min-content width and
+       force the grid item wider than its `minmax(0, 1fr)` track,
+       which scrolls the whole document horizontally. `overflow-wrap:
+       anywhere` only kicks in when no normal break opportunity exists,
+       so it doesn't disturb CJK / soft-wrapped prose. */
+    overflow-wrap: anywhere;
+    word-break: normal;
     /* No max-width here on purpose: the list page renders inside
        .article-body too, and constraining to 760px would squeeze the
        article items' title column. The detail page's body is naturally
