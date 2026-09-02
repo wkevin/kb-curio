@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "kb-curio — a knowledge-base framework + scaffolder monorepo",
+  "bin": {
+    "kb-curio": "./bin/kb-curio.mjs"
+  },
   "packageManager": "pnpm@10.33.4",
   "engines": {
     "node": ">=20"

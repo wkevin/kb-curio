@@ -16,7 +16,7 @@
  * one path):
  *   1. source-repo / monorepo — `node_modules/@kb-curio/core/skills`
  *      exists when scaffolded next to the framework checkout (resolved by
- *      pnpm/npm via the workspace:*/link: deps written by `init`).
+ *      pnpm/npm via `workspace:*` / `link:` deps written by `init`).
  *   2. published-npm — same path (`node_modules/...`) when scaffolded
  *      against the registry with `^x.y.z` deps.
  *
@@ -31,9 +31,7 @@ const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const SKILL_NAMES = ['article-fetcher', 'blog-creator'];
 
-const CANDIDATES = [
-  'node_modules/@kb-curio/core/skills',
-];
+const CANDIDATES = ['node_modules/@kb-curio/core/skills'];
 
 const skillsRoot = CANDIDATES.find((p) => existsSync(resolve(PROJECT_ROOT, p)));
 

@@ -4,40 +4,6 @@
 
 `@kb-curio/core` 和 `@kb-curio/cli` 是这个 monorepo 里发布的两个 npm 包。**首次发布前**，下游用户可以用 GitHub URL 直接装（见下方"GitHub 源"），也可以用本地 monorepo 方式（见下方"本地开发"）；发布之后，外部用户可以直接 `npx @kb-curio/cli init`（见下方"npm 用户"）。
 
-## 目录结构
-
-```
-kb-curio/
-├── packages/
-│   ├── core/         @kb-curio/core — Astro 5 web framework (npm)
-│   └── cli/          @kb-curio/cli — 脚手架（`kb-curio init`，npm）
-│       ├── src/{cli,init,git,package-manager,sync-skills}.ts
-│       └── template/                    `kb-curio init` 时复制的内容
-├── demo/             framework 的参考 demo（单实例，私有）
-│   └── data/
-│       └── article/                     扁平 <YYYYMM>/<YYYYMMDD_slug>/ 条目（多 topic）
-└── scripts/
-    └── sync-demo-from-template.ts       template → demo 同步脚本
-```
-
-## 快速开始（本地开发）
-
-```bash
-# 安装 workspace 依赖
-pnpm install
-
-# 启动 demo（Astro dev server）
-pnpm dev:demo
-# → http://localhost:4321/
-
-# 构建 framework + CLI
-pnpm build
-
-# 在当前仓库里用脚手架生成一个新项目（指向本地的 framework）
-pnpm --filter @kb-curio/cli build
-node packages/cli/dist/cli.js init ../my-new-kb --no-install --no-git
-```
-
 ## 快速开始（npm 用户）
 
 发布之后，外部用户不需要 clone 这个仓库：
@@ -46,17 +12,18 @@ node packages/cli/dist/cli.js init ../my-new-kb --no-install --no-git
 # 一次性使用（无需全局安装）
 npx -y @kb-curio/cli init my-new-kb --no-install --no-git
 cd my-new-kb && pnpm install && pnpm dev
-
-# 或者全局安装后像普通命令一样用
-npm i -g @kb-curio/cli
-kb-curio init my-new-kb
 ```
 
 ## 快速开始（GitHub 源 / 预发布测试）
 
-不想等 npm 发布，也不想 clone 整个 monorepo——直接从 GitHub URL 装 framework：
+```bash
+# 一行搞定：npx 自动从 GitHub 拉源码 + 跑脚手架
+# 第一次需要时（dist 不存在）会自动 pnpm install + pnpm build
+npx github:wkevin/kb-curio init my-new-kb --no-install --no-git
+cd my-new-kb && pnpm install && pnpm dev
+```
 
-**A. Clone 模式（在 monorepo 旁边 scaffold，`link:` 指向 monorepo）**
+或等效操作：
 
 ```bash
 git clone https://github.com/wkevin/kb-curio
@@ -69,39 +36,21 @@ node packages/cli/dist/cli.js init ../my-new-kb --no-install --no-git
 cd ../my-new-kb && pnpm install && pnpm dev
 ```
 
-**B. 通过 GitHub URL 直接装（framework 进 `node_modules/`，等价于 npm 用户那条路但 source 是 GitHub）**
-
-```bash
-# pnpm 直接吃 GitHub URL，会把 monorepo 拉下来
-pnpm add github:wkevin/kb-curio
-# 或 npm
-npm install github:wkevin/kb-curio
-# 指定分支 / tag / commit
-pnpm add github:wkevin/kb-curio#my-feature-branch
-pnpm add github:wkevin/kb-curio#v0.2.0
-
-# 用 CLI scaffold（此时 framework 在 node_modules，走 npm 模式）
-npx kb-curio init my-new-kb --no-install --no-git
-cd my-new-kb && pnpm install && pnpm dev
-```
-
-适用场景：首次发布前测新功能 / 测某个 PR / 用自家 fork 来 scaffold / 不 clone 整个 monorepo 只想跑个 demo。
-
 ### 脚手架参数
 
-| 参数                | 作用                                                                  |
-| ------------------- | --------------------------------------------------------------------- |
-| `[dir]`             | 目标目录（默认 `<cwd-basename>-kb`）                                  |
-| `-n, --name`        | 项目名（默认取 `dir` 的 basename）                                    |
-| `--use-pnpm`        | 用 pnpm 安装（默认，若 pnpm 在 PATH 上）                              |
-| `--use-npm`         | 用 npm 安装                                                           |
-| `--use-yarn`        | 用 yarn 安装                                                          |
-| `--use-bun`         | 用 bun 安装                                                           |
-| `--no-install`      | 跳过依赖安装                                                          |
-| `--no-git`          | 跳过 `git init` + 首次提交                                            |
-| `--local`           | 强制本地 monorepo 模式(把 `@kb-curio/core` 改成 `workspace:*` 并把这个项目注册到父级 `pnpm-workspace.yaml`) |
-| `--no-local`        | 强制已发布到 npm 的模式(保留 `@kb-curio/core` 为 `^0.2.0`)              |
-| `--force`           | 允许向非空目录写入                                                    |
+| 参数           | 作用                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| `[dir]`        | 目标目录（默认 `<cwd-basename>-kb`）                                                                        |
+| `-n, --name`   | 项目名（默认取 `dir` 的 basename）                                                                          |
+| `--use-pnpm`   | 用 pnpm 安装（默认，若 pnpm 在 PATH 上）                                                                    |
+| `--use-npm`    | 用 npm 安装                                                                                                 |
+| `--use-yarn`   | 用 yarn 安装                                                                                                |
+| `--use-bun`    | 用 bun 安装                                                                                                 |
+| `--no-install` | 跳过依赖安装                                                                                                |
+| `--no-git`     | 跳过 `git init` + 首次提交                                                                                  |
+| `--local`      | 强制本地 monorepo 模式(把 `@kb-curio/core` 改成 `workspace:*` 并把这个项目注册到父级 `pnpm-workspace.yaml`) |
+| `--no-local`   | 强制已发布到 npm 的模式(保留 `@kb-curio/core` 为 `^0.2.0`)                                                  |
+| `--force`      | 允许向非空目录写入                                                                                          |
 
 ## 项目配置
 
@@ -148,6 +97,42 @@ url: https://... # 可选；来源 URL
 ## 可用 skills
 
 `.agents/skills/article-fetcher/` 和 `.agents/skills/blog-creator/` 随 `@kb-curio/core` 一起发布，并通过 `kb-curio init` 镜像到脚手架生成的项目里——发布后的镜像以真实目录形式（而非 symlink）随 tarball 一起分发。
+
+
+## 目录结构
+
+```
+kb-curio/
+├── packages/
+│   ├── core/         @kb-curio/core — Astro 5 web framework (npm)
+│   └── cli/          @kb-curio/cli — 脚手架（`kb-curio init`，npm）
+│       ├── src/{cli,init,git,package-manager,sync-skills}.ts
+│       └── template/                    `kb-curio init` 时复制的内容
+├── demo/             framework 的参考 demo（单实例，私有）
+│   └── data/
+│       └── article/                     扁平 <YYYYMM>/<YYYYMMDD_slug>/ 条目（多 topic）
+└── scripts/
+    └── sync-demo-from-template.ts       template → demo 同步脚本
+```
+
+## 快速开始（本地开发）
+
+```bash
+# 安装 workspace 依赖
+pnpm install
+
+# 启动 demo（Astro dev server）
+pnpm dev:demo
+# → http://localhost:4321/
+
+# 构建 framework + CLI
+pnpm build
+
+# 在当前仓库里用脚手架生成一个新项目（指向本地的 framework）
+pnpm --filter @kb-curio/cli build
+node packages/cli/dist/cli.js init ../my-new-kb --no-install --no-git
+```
+
 
 ## 保持 demo 与 template 同步
 

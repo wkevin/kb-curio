@@ -243,8 +243,6 @@ function rewriteForLocalMode(target: string, value = 'workspace:*'): void {
   fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
 }
 
-
-
 function maybeRegisterInWorkspace(target: string, monorepo: Monorepo): void {
   const wsPath = path.join(monorepo.root, 'pnpm-workspace.yaml');
   if (!fs.existsSync(wsPath)) return;
