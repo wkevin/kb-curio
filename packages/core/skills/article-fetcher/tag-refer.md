@@ -83,3 +83,21 @@
 - 隐私与安全
 - Skill
 - RAG
+
+## 学术论文
+
+- arxiv
+- machine-learning
+- transformer
+- LLM
+- diffusion
+- reinforcement-learning
+- alignment
+- RAG
+- agent
+- multimodal
+- robotics
+- theory
+- benchmark
+- optimization
+- 综述

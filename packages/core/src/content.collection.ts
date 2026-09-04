@@ -54,6 +54,12 @@ export async function kbCurioArticleCollection() {
       updatedDate: z.coerce.date().optional(),
       author: z.union([z.string(), z.number()]).optional(),
       url: z.string().url().optional(),
+      // arxiv paper metadata — populated by paper-fetcher skill. All optional
+      // so existing curated-article frontmatter keeps validating unchanged.
+      arxivId: z.string().optional(),
+      authors: z.array(z.string()).optional(),
+      abstract: z.string().optional(),
+      categories: z.array(z.string()).optional(),
       // Source is always optional: research-log posts have no `source`, only
       // curated external articles do. When a value is present and the project
       // defines a source enum (sources.md), it must match.

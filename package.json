@@ -1,6 +1,6 @@
 {
   "name": "kb-curio",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "description": "kb-curio — a knowledge-base framework + scaffolder monorepo",

@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const SKILL_NAMES = ['article-fetcher', 'blog-creator'];
+const SKILL_NAMES = ['article-fetcher', 'blog-creator', 'paper-fetcher'];
 
 const CANDIDATES = ['node_modules/@kb-curio/core/skills'];
 

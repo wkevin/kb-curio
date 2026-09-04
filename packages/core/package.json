@@ -1,7 +1,7 @@
 {
   "name": "@kb-curio/core",
   "type": "module",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Astro 5 web framework that powers kb-curio knowledge bases",
   "license": "MIT",
   "repository": {

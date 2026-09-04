@@ -1,6 +1,6 @@
 {
   "name": "@kb-curio/cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "kb-curio scaffolder — `kb-curio init <dir>` to bootstrap a new knowledge base from the @kb-curio/core framework.",
   "license": "MIT",
