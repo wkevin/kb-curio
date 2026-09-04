@@ -97,7 +97,11 @@ article/
 - **fetchDate**(操作时间戳): 根据**当前操作时间**打上的时间戳(ISO 8601 格式, 如 `2026-08-29T04:23:27.000Z`)。
   - 它**不是**"抓取时间", 也**不是**"原文发布时间"(那是 pubDate);
   - 它表示 skill **执行这一刻**的时间, 后续对文章的二次编辑/更新也应该刷新这个字段。
-  - **未来日期防御**：用 +08:00 当天的 **00:00:00**（`YYYY-MM-DDT00:00:00.000Z`）而不是 `datetime.now()`。直接用 `now()` 在不同时区的系统上会得到不同时间（比如 12:00 UTC = 20:00 北京时间），可能落在用户视角的"未来"，导致 RSS reader 把整篇 item 过滤掉。固定 +08:00 零点是最稳妥的可重现时间戳。如果必须用 `now()`，先 cap 到 `+08:00` 当天 23:59:59。`wechat-fetch.py` 的 `build_markdown` 同样会做这个 cap。
+  - **必须 timezone-aware**: fetchDate 是 skill 执行当下的真实 wall-clock 时刻,不做"对齐零点"之类的取整。直接 `now()` 不会产生"未来时间",真正会制造未来时间的只有 naive datetime + 手动拼 `'Z'` 这一类时区处理错误。正确做法:
+    - Python: `datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')`
+    - Node: `new Date().toISOString()`(本身即 UTC + `Z`)
+    - 禁止 naive `datetime.now()` / `datetime.utcnow()` 后手动拼 `'Z'` —— 这两种都会把本地时间误标成 UTC,才是 RSS reader 把 item 当成未来时间的真正成因。
+  - 注: `wechat-fetch.py` 的 `build_markdown` 只对 **pubDate** 做未来日期 cap,不动 fetchDate。
 
 #### 抓取方式 — Fallback 链（按顺序尝试）
 
@@ -253,7 +257,7 @@ topics: [
 title: 文章标题
 url: URL
 pubDate: YYYY-MM-DD
-fetchDate: <当前 +08:00 日期>T00:00:00.000Z  # 用 +08:00 零点，不要用 datetime.now()
+fetchDate: <datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')>  # timezone-aware UTC,例如 2026-08-29T04:23:27Z (Node `new Date().toISOString()` 也可,会带 `.000Z`)
 author: <原作者名称（如有）>
 source: <分类>
 topics:
