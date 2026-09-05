@@ -53,8 +53,8 @@ article/
 在抓取之前，先检查 arxiv id 是否已经下载：
 
 1. 从 URL 中提取 arxiv id（裸 id 直接用）。
-3. 检查 `article/fetched.md`（如果不存在则创建）。
-4. 如果已存在，跳过抓取：
+2. 检查 `article/fetched.md`（如果不存在则创建）。
+3. 如果已存在，跳过抓取：
 
 ```
 ⚠️ 该论文已下载过：https://arxiv.org/abs/<id>
@@ -225,7 +225,25 @@ categories:                                # 数组
   - <cat 1>
   - <cat 2>
 pubDate: <YYYY-MM-DD>
-fetchDate: <datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')>  # timezone-aware UTC
+fetchDate: <从 arxiv-fetch.py JSON 的 metadata._fetchTimestamp 字段原样复制>  # 自动注入，agent 不要手填
+
+#### fetchDate 取值规则（agent 不要自己生成，硬约束从脚本读）
+
+**第 1 层 · 自动注入**：`arxiv-fetch.py` 在脚本末尾自动向 `metadata` 字典注入 `_fetchTimestamp` 字段（脚本自己用 `datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')` 计算）。Agent **必须**把 JSON 里 `metadata._fetchTimestamp` 的值原样复制到 frontmatter 的 `fetchDate` 字段——agent 没有"重新计算"或"脑补" fetchDate 的环节，自然不会算错。
+
+**第 2 层 · 后备命令**（仅在不能跑 arxiv-fetch.py 时用）：写 frontmatter **之前**先跑：
+
+```bash
+ts=$(node scripts/fetch-now.mjs)   # 真实 UTC，秒级，带 Z
+# 把 $ts 原样贴进 fetchDate
+```
+
+**禁用做法**（多次踩坑）：
+
+- ❌ 把 Beijing wall-clock 时间（如 `11:48:30`）拼上 `Z` 当成 UTC——这是把本地时间误标成 UTC，比真实 UTC 早 8 小时，被 RSS reader 当成未来时间
+- ❌ 手填任何"看起来合理"的值——`scripts/check-fetchdates.mjs` post-hoc 扫描会把 fetchDate > now+60s 判失败并退出 1
+
+后续对论文的二次编辑/重抓也应该从 arxiv-fetch.py 的 `_fetchTimestamp` 字段刷新 fetchDate，反映 skill 最近一次操作的时刻。
 source: academic-papers                    # 复用已有 source
 topics:
   - paper-reading                          # 新增 topic

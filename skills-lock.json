@@ -4,7 +4,7 @@
     "article-fetcher": {
       "source": "packages/core/skills/article-fetcher",
       "sourceType": "local",
-      "computedHash": "63e9ae2929156d3f044ac52909cd65c9f18af81ce194afd90571edcfadf913ef"
+      "computedHash": "acf52da1c047d80d05a86889a6d9d1794164b068c6106f6344765fd34b722096"
     },
     "blog-creator": {
       "source": "packages/core/skills/blog-creator",
@@ -14,7 +14,7 @@
     "paper-fetcher": {
       "source": "packages/core/skills/paper-fetcher",
       "sourceType": "local",
-      "computedHash": "ede61794e707ec8a9a6c1f9873517672819ecd2b55caff6b1817d67994e2bf9c"
+      "computedHash": "a94170f926a4e36c617089c31336d174f1f47b4539cbfa8b9ffe00bbb6423acd"
     }
   }
 }

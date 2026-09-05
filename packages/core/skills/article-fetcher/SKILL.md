@@ -101,6 +101,12 @@ article/
     - Python: `datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')`
     - Node: `new Date().toISOString()`(本身即 UTC + `Z`)
     - 禁止 naive `datetime.now()` / `datetime.utcnow()` 后手动拼 `'Z'` —— 这两种都会把本地时间误标成 UTC,才是 RSS reader 把 item 当成未来时间的真正成因。
+  - **【硬规则 · 必读】agent 不准手填 fetchDate**：常见 bug 是 agent 跳过上面公式、用本地 wall-clock 时间（如 Beijing 11:48）拼上 `Z` 当成 UTC，写成 `11:48:00Z`——但实际 UTC 是 `03:48:00Z`（早 8 小时），被 RSS reader 当成未来时间。修复：写 frontmatter **之前**必须先跑：
+    ```bash
+    ts=$(node scripts/fetch-now.mjs)   # 输出当前真实 UTC，秒级，带 Z
+    # 然后把 $ts 原样贴进 frontmatter 的 fetchDate 行
+    ```
+    或 Node 内嵌：`const ts = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')`——必须真的执行，不准脑补。`scripts/check-fetchdates.mjs` 会 post-hoc 扫描所有 `data/article/*/*/index.md`，任何 fetchDate > now+60s 都判失败并退出 1（防止 agent 提交未来时间）。
   - 注: `wechat-fetch.py` 的 `build_markdown` 只对 **pubDate** 做未来日期 cap,不动 fetchDate。
 
 #### 抓取方式 — Fallback 链（按顺序尝试）
